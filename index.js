@@ -30,6 +30,12 @@ if (cluster.isPrimary) {
       client_offset TEXT UNIQUE,
       content TEXT
     );
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE,
+      password TEXT,
+      email TEXT
+    );
   `);
 
   const app = express();
