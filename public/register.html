@@ -21,7 +21,7 @@
             <i class="material-icons lock">lock</i> Register
         </div>
 
-        <form>
+        <form onsubmit="handleRegister(event)">
             <div class="input">
                 <div class="input-addon">
                     <i class="material-icons">email</i>
@@ -64,6 +64,43 @@
             <a href="#"><button id="register-link">Log In here</button></a>
         </div>
     </div>
+
+    <script>
+        document.getElementById('register-link').addEventListener('click', redirectToLogin);
+
+        function redirectToLogin() {
+            window.location.href = '/api/v1/user/login';
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const email = document.getElementById('email').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const response = await fetch('/api/v1/user/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email,
+                    username,
+                    password
+                })
+            });
+
+            const body = await response.text();
+
+            if (response.ok) {
+                alert('Registration successful');
+                window.location.href = '/api/v1/user/login';
+            } else {
+                alert(`Registration failed: ${body}`);
+            }
+        }
+    </script>
 </body>
 
 </html>

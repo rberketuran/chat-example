@@ -2,14 +2,17 @@ import express from 'express';
 import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { Server } from 'socket.io';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
 import { availableParallelism } from 'node:os';
 import cluster from 'node:cluster';
-import { createAdapter, setupPrimary } from '@socket.io/cluster-adapter';
 import cookieParser from 'cookie-parser';
 import userRoutes from './routes/user.routes.js';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import verifyToken from './middlewares/authJwt.js';
+import setupSocketIO from './socket.js'; // Import the socket.io setup function
+import setupPrimary from '@socket.io/cluster-adapter';
+
+dotenv.config();
 
 if (cluster.isPrimary) {
   const numCPUs = availableParallelism();
@@ -19,83 +22,40 @@ if (cluster.isPrimary) {
     });
   }
 
-  setupPrimary();
+  cluster.setupPrimary();
 } else {
-  const db = await open({
-    filename: 'chat.db',
-    driver: sqlite3.Database
-  });
-
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS messages (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_offset TEXT UNIQUE,
-      content TEXT
-    );
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE,
-      password TEXT,
-      email TEXT
-    );
-  `);
-
   const app = express();
   const server = createServer(app);
-  const io = new Server(server, {
-    connectionStateRecovery: {},
-    adapter: createAdapter()
-  });
 
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
-  
-  app.use(express.static(join(__dirname, 'public')));
 
-  app.get('/', (req, res) => {
-    res.sendFile(join(__dirname, '/public/index.html'));
-  });
-
-  app.use('/api/v1/user', express.static('public'), userRoutes);
-
-  app.use(express.static(join(__dirname, '/public')));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(cookieParser());
-  
+  app.use(cors());
 
-  io.on('connection', async (socket) => {
-    socket.on('chat message', async (msg, clientOffset, callback) => {
-      let result;
-      try {
-        result = await db.run('INSERT INTO messages (content, client_offset) VALUES (?, ?)', msg, clientOffset);
-      } catch (e) {
-        if (e.errno === 19 /* SQLITE_CONSTRAINT */ ) {
-          callback();
-        } else {
-          // nothing to do, just let the client retry
-        }
-        return;
-      }
-      io.emit('chat message', msg, result.lastID);
-      callback();
-    });
-
-    if (!socket.recovered) {
-      try {
-        await db.each('SELECT id, content FROM messages WHERE id > ?',
-          [socket.handshake.auth.serverOffset || 0],
-          (_err, row) => {
-            socket.emit('chat message', row.content, row.id);
-          }
-        )
-      } catch (e) {
-        // something went wrong
-      }
-    }
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
   });
 
-  const port = process.env.PORT;
+  app.get('/', verifyToken, (req, res) => {
+    res.sendFile(join(__dirname, '/public/index.html'));
+  });
+
+  // Ensure this middleware is set up before userRoutes if it's necessary
+  app.use('/api/v1/user', express.static('public'));
+
+  // Handle user-related routes
+  app.use('/api/v1/user', userRoutes);
+
+  app.use(express.static(join(__dirname, 'public')));
+
+  // Pass server to socket.io setup function
+  setupSocketIO(server);
+
+  const port = process.env.PORT || 3000;
 
   server.listen(port, () => {
     console.log(`server running at http://localhost:${port}`);

@@ -3,21 +3,23 @@ import sqlite3 from 'sqlite3';
 import jsonwebtoken from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
+
 const db = await open({
     filename: 'chat.db',
     driver: sqlite3.Database
 });
 
 let register = async (req, res) => {
+    console.log("sa");
     const { username, password, email } = req.body;
-    
-    if(!username || !password || !email) {
+
+    if (!username || !password || !email) {
         return res.status(400).send({ message: 'All fields are required!' });
     }
 
     let user = await db.get('SELECT * FROM users WHERE username = ? OR email = ?', username, email);
 
-    if(user) {
+    if (user) {
         return res.status(400).send({ message: 'User already exists!' });
     }
 
@@ -26,25 +28,25 @@ let register = async (req, res) => {
     try {
         await db.run('INSERT INTO users (username, password, email) VALUES (?, ?, ?)', username, hashedPassword, email);
         return res.status(201).send({ message: 'User registered successfully!' });
-    } catch(e) {
+    } catch (e) {
         return res.status(500).send({ message: e.message });
     }
-}
+};
 
 let login = async (req, res) => {
     const { username, password } = req.body;
 
-    if(!username || !password) {
+    if (!username || !password) {
         return res.status(400).send({ message: 'All fields are required!' });
     }
 
     let user = await db.get('SELECT * FROM users WHERE username = ?', username);
-    if(!user) {
+    if (!user) {
         return res.status(404).send({ message: 'User not found!' });
     }
 
     const passwordIsValid = bcrypt.compareSync(password, user.password);
-    if(!passwordIsValid) {
+    if (!passwordIsValid) {
         return res.status(401).send({ message: 'Invalid password!' });
     }
 
@@ -54,7 +56,7 @@ let login = async (req, res) => {
 
     res.cookie('token', token, { httpOnly: true });
     return res.status(200).send({ message: 'User logged in successfully!' });
-}
+};
 
 let controller = {
     register,

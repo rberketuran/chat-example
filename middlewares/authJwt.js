@@ -1,23 +1,19 @@
 import jsonwebtoken from 'jsonwebtoken';
 
-verifyToken = (req, res, next) => {
+const verifyToken = (req, res, next) => {
     const token = req.cookies.token;
 
-    if(!token) {
+    if (!token) {
         return res.status(403).send({ message: 'No token provided!' });
     }
 
-    jwt.verifyToken(token, process.env.SECRET, (err, decoded) => {
-        if(err) {
+    jsonwebtoken.verify(token, process.env.SECRET, (err, decoded) => {
+        if (err) {
             return res.status(401).send({ message: 'Unauthorized!' });
         }
-        req.userId = decoded.id;
-        next();
+        req.userId = decoded.id; // Assuming your JWT payload has an 'id' field
+        next(); // Call next() only if token is valid
     });
-}
-
-const authJwt = {
-    verifyToken
 };
 
-module.exports = authJwt;
+export default verifyToken;

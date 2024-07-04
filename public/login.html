@@ -21,7 +21,7 @@
             <i class="material-icons lock">lock</i> Login
         </div>
 
-        <form>
+        <form onsubmit="handleLogin(event)">
             <div class="input">
                 <div class="input-addon">
                     <i class="material-icons">face</i>
@@ -35,7 +35,8 @@
                 <div class="input-addon">
                     <i class="material-icons">vpn_key</i>
                 </div>
-                <input id="password" placeholder="Password" type="password" required class="validate" autocomplete="off">
+                <input id="password" placeholder="Password" type="password" required class="validate"
+                    autocomplete="off">
             </div>
 
             <div class="remember-me">
@@ -55,9 +56,42 @@
 
         <div class="register">
             Don't have an account yet?
-            <a href="#"><button id="register-link">Register here</button></a>
+            <a href="#"><button onclick="redirectToRegister()" id="register-link">Register here</button></a>
         </div>
     </div>
+    <script>
+        function redirectToRegister() {
+            window.location.href = '/api/v1/user/register';
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const response = await fetch('/api/v1/user/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username,
+                    password,
+                }),
+            });
+
+            const responseData = await response.json();
+
+            if (response.ok) {
+                alert('Login successful');
+                window.location.href = '/';
+            } else {
+                // Handle login failure (e.g., show an error message)
+                alert(responseData.message);
+            }
+        }
+    </script>
 </body>
 
 </html>
