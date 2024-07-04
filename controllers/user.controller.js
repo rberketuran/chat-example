@@ -1,3 +1,5 @@
+import { open } from 'sqlite';
+import sqlite3 from 'sqlite3';
 import jsonwebtoken from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
@@ -6,24 +8,30 @@ const db = await open({
     driver: sqlite3.Database
 });
 
-exports.register = async (req, res) => {
+let register = async (req, res) => {
     const { username, password, email } = req.body;
     
     if(!username || !password || !email) {
         return res.status(400).send({ message: 'All fields are required!' });
     }
 
+    let user = await db.get('SELECT * FROM users WHERE username = ? OR email = ?', username, email);
+
+    if(user) {
+        return res.status(400).send({ message: 'User already exists!' });
+    }
+
     const hashedPassword = bcrypt.hashSync(password, 8);
 
     try {
-        await db.run('INSERT INTO users (username, password, email) VALUES (?, ?, ?)', username, password, email);
+        await db.run('INSERT INTO users (username, password, email) VALUES (?, ?, ?)', username, hashedPassword, email);
         return res.status(201).send({ message: 'User registered successfully!' });
     } catch(e) {
         return res.status(500).send({ message: e.message });
     }
 }
 
-exports.login = async (req, res) => {
+let login = async (req, res) => {
     const { username, password } = req.body;
 
     if(!username || !password) {
@@ -47,3 +55,10 @@ exports.login = async (req, res) => {
     res.cookie('token', token, { httpOnly: true });
     return res.status(200).send({ message: 'User logged in successfully!' });
 }
+
+let controller = {
+    register,
+    login
+};
+
+export default controller;

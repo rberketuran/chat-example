@@ -8,6 +8,8 @@ import { open } from 'sqlite';
 import { availableParallelism } from 'node:os';
 import cluster from 'node:cluster';
 import { createAdapter, setupPrimary } from '@socket.io/cluster-adapter';
+import cookieParser from 'cookie-parser';
+import userRoutes from './routes/user.routes.js';
 
 if (cluster.isPrimary) {
   const numCPUs = availableParallelism();
@@ -45,11 +47,22 @@ if (cluster.isPrimary) {
     adapter: createAdapter()
   });
 
-  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  
+  app.use(express.static(join(__dirname, 'public')));
 
   app.get('/', (req, res) => {
     res.sendFile(join(__dirname, '/public/index.html'));
   });
+
+  app.use('/api/v1/user', express.static('public'), userRoutes);
+
+  app.use(express.static(join(__dirname, '/public')));
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParser());
+  
 
   io.on('connection', async (socket) => {
     socket.on('chat message', async (msg, clientOffset, callback) => {
