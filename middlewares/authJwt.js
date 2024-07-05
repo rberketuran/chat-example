@@ -4,7 +4,7 @@ const verifyToken = (req, res, next) => {
     const token = req.cookies.token;
 
     if (!token) {
-        return res.status(403).send({ message: 'No token provided!' });
+        return res.redirect('/api/v1/user/login');
     }
 
     jsonwebtoken.verify(token, process.env.SECRET, (err, decoded) => {

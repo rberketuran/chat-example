@@ -10,7 +10,6 @@ const db = await open({
 });
 
 let register = async (req, res) => {
-    console.log("sa");
     const { username, password, email } = req.body;
 
     if (!username || !password || !email) {

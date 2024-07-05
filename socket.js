@@ -33,7 +33,6 @@ const setupSocketIO = async (server) => {
 
   io.on('connection', async (socket) => {
     socket.user = await db.get('SELECT * FROM users WHERE id = ?', socket.userId);
-    console.log(`User ${socket.user.username} connected`);
 
     socket.on('chat message', async (msg, clientOffset, callback) => {
       let result;
