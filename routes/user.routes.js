@@ -20,7 +20,6 @@ router.post('/register', controller.register);
 router.post('/login', controller.login);
 
 router.post('/logout', (req, res) => {
-  console.log('Logout endpoint accessed'); // Debug log
   res.clearCookie('token');
   res.status(200).send({ message: 'Logged out successfully!' });
 });

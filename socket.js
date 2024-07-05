@@ -16,10 +16,8 @@ const setupSocketIO = async (server) => {
   });
 
   io.use((socket, next) => {
-    // Get token from cookies or headers
     const token = socket.handshake.auth.token || socket.handshake.headers.cookie?.split('=')[1];
 
-    // Verify token
     if (!token) {
       return next(new Error('No token provided!'));
     }
@@ -28,29 +26,29 @@ const setupSocketIO = async (server) => {
       if (err) {
         return next(new Error('Unauthorized!'));
       }
-      socket.userId = decoded.id; // Store user ID in socket for future use
+      socket.userId = decoded.id;
       next();
     });
   });
 
   io.on('connection', async (socket) => {
-    console.log(`User ${socket.userId} connected`);
-    let user = await db.get('SELECT * FROM users WHERE id = ?', socket.userId);
+    socket.user = await db.get('SELECT * FROM users WHERE id = ?', socket.userId);
+    console.log(`User ${socket.user.username} connected`);
 
-    socket.on('chat message', async (msg, user, clientOffset, callback) => {
+    socket.on('chat message', async (msg, clientOffset, callback) => {
       let result;
       try {
         result = await db.run('INSERT INTO messages (content, client_offset) VALUES (?, ?)', msg, clientOffset);
       } catch (e) {
-        if (e.errno === 19 /* SQLITE_CONSTRAINT */) {
-          callback();
+        if (e.errno === 19) {
+          if (callback) callback();
         } else {
           // nothing to do, just let the client retry
         }
         return;
       }
-      io.emit('chat message', msg, user, result.lastID);
-      callback();
+      io.emit('chat message', { msg, username: socket.user.username }, result.lastID);
+      if (callback) callback();
     });
 
     if (!socket.recovered) {
@@ -58,7 +56,7 @@ const setupSocketIO = async (server) => {
         await db.each('SELECT id, content FROM messages WHERE id > ?',
           [socket.handshake.auth.serverOffset || 0],
           (_err, row) => {
-            socket.emit('chat message', row.content, row.id);
+            socket.emit('chat message', { msg: row.content, username: socket.user.username }, row.id);
           }
         )
       } catch (e) {

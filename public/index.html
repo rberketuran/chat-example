@@ -87,11 +87,11 @@
     const input = document.getElementById('input');
     const messages = document.getElementById('messages');
 
-     form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
       if (input.value) {
         const clientOffset = `${socket.id}-${counter++}`;
-        socket.emit('chat message', input.value, null, clientOffset, (err) => {
+        socket.emit('chat message', input.value, clientOffset, (err) => {
           if (err) {
             console.error('Message delivery failed:', err);
           } else {
@@ -101,10 +101,11 @@
         input.value = '';
       }
     });
+    
 
-    socket.on('chat message', (msg, user, serverOffset) => {
+    socket.on('chat message', ({ msg, username }, serverOffset) => {
       const item = document.createElement('li');
-      item.textContent = msg;
+      item.textContent = `${username}: ${msg}`;
       messages.appendChild(item);
       window.scrollTo(0, document.body.scrollHeight);
       socket.auth.serverOffset = serverOffset;
