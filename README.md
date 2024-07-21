@@ -1,3 +1,7 @@
+This is a socket.io tutorial example. I have sorted out the example project, and added user login and authentication.
+
+
+
 # Socket.IO chat example
 
 This is the source code for a very simple chat example used for the [Tutorial](https://socket.io/docs/v4/tutorial/introduction) guide of the Socket.IO website.
